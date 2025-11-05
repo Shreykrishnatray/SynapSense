@@ -1,8 +1,8 @@
 from fastapi import FastAPI
-from dotenv import load_dotenv  # 👈 add this
+from dotenv import load_dotenv 
 import os
 
-load_dotenv()  # 👈 this loads your .env file
+load_dotenv()  #this will load my .env file
 
 from app.routes.plan_routes import router as plan_router
 
@@ -21,7 +21,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # to adjust afterwards
+    allow_origins=["*"], # to adjust afterwards for security
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -33,9 +33,6 @@ app.include_router(plan_routes.router)
 @app.get("/")
 def root():
     return {"message": "SynapSense backend is running successfully"}
-
-
-app = FastAPI()
 
 app.include_router(plan_router)
 
