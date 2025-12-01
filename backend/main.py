@@ -1,44 +1,39 @@
 from fastapi import FastAPI
-from dotenv import load_dotenv 
+from dotenv import load_dotenv
 import os
+from fastapi.middleware.cors import CORSMiddleware
 
-load_dotenv()  #this will load my .env file
+# Load environment variables from .env
+load_dotenv()
 
+# Import routes
 from app.routes.plan_routes import router as plan_router
 
-app = FastAPI()
-app.include_router(plan_router)
-
-from fastapi.middleware.cors import CORSMiddleware
-from app.routes import plan_routes
-
+# Initialize FastAPI app
 app = FastAPI(
     title="SynapSense - Thought To Action",
     description="Backend API for AI-driven task planning and visualization",
     version="1.0.0"
 )
 
-
+# Enable CORS (allow frontend to talk to backend)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # to adjust afterwards for security
+    allow_origins=["*"],  # adjust for security in production
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-
-app.include_router(plan_routes.router)
-
-@app.get("/")
-def root():
-    return {"message": "SynapSense backend is running successfully"}
-
+# Include routers
 app.include_router(plan_router)
 
+# Root endpoint
 @app.get("/")
-def home():
+def root():
     return {"message": "SynapSense backend is running 🚀"}
+
+
 
 
 
