@@ -40,11 +40,6 @@ app.include_router(plan_router)
 def home():
     return {"message": "SynapSense backend is running 🚀"}
 
-import os
-
-print("OPENAI_API_KEY =", os.getenv("OPENAI_API_KEY"))
-
-
 
 
 
