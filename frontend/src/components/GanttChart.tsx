@@ -2,49 +2,45 @@ import { useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { Calendar } from 'lucide-react';
 
+interface TaskFromBackend {
+  id: string;
+  name: string;
+  start: number; // start week
+  duration: number; // weeks
+  dependencies?: string[]; // ids of dependent tasks
+}
+
 interface GanttChartProps {
-  plan: string;
+  plan: {
+    tasks: TaskFromBackend[];
+  };
 }
 
 interface Task {
+  id: string;
   name: string;
   start: number;
   duration: number;
   end: number;
 }
 
-/**
- * Gantt Chart Component
- * Timeline visualization of tasks using Recharts
- * Converts plan steps into time-based tasks
- */
 const GanttChart = ({ plan }: GanttChartProps) => {
-  // Parse plan and create task timeline
   const tasks: Task[] = useMemo(() => {
-    const steps = plan
-      .split('\n')
-      .filter(line => line.trim())
-      .filter(line => /^\d+\./.test(line.trim()))
-      .map(line => line.replace(/^\d+\.\s*/, '').trim())
-      .filter(step => step.length > 0);
+    if (!plan?.tasks || plan.tasks.length === 0) return [];
 
-    // Generate timeline with staggered durations
-    let currentStart = 0;
-    return steps.slice(0, 10).map((step, index) => {
-      // Vary duration between 1-4 weeks based on task complexity
-      const duration = Math.floor(Math.random() * 3) + 2;
-      const task = {
-        name: step.length > 35 ? step.substring(0, 35) + '...' : step,
-        start: currentStart,
-        duration: duration,
-        end: currentStart + duration,
-      };
-      currentStart += duration;
-      return task;
-    });
+    return plan.tasks.map(task => ({
+      id: task.id,
+      name: task.name.length > 35 ? task.name.substring(0, 35) + '...' : task.name,
+      start: task.start,
+      duration: task.duration,
+      end: task.start + task.duration,
+    }));
   }, [plan]);
 
-  // Custom tooltip for better UX
+  if (tasks.length === 0) {
+    return <div className="text-center text-muted-foreground p-6">No tasks available for Gantt chart.</div>;
+  }
+
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload;
@@ -52,7 +48,7 @@ const GanttChart = ({ plan }: GanttChartProps) => {
         <div className="bg-card/95 backdrop-blur-sm border border-border/50 rounded-lg p-3 shadow-neural">
           <p className="font-semibold text-sm mb-1 text-foreground">{data.name}</p>
           <p className="text-xs text-muted-foreground">
-            Week {data.start + 1} - {data.end + 1} ({data.duration} weeks)
+            Week {data.start + 1} - {data.end} ({data.duration} weeks)
           </p>
         </div>
       );
@@ -60,14 +56,13 @@ const GanttChart = ({ plan }: GanttChartProps) => {
     return null;
   };
 
-  // Color gradient for bars
   const getBarColor = (index: number) => {
     const colors = [
-      'hsl(195, 100%, 50%)',
-      'hsl(195, 90%, 55%)',
-      'hsl(195, 85%, 60%)',
-      'hsl(180, 90%, 55%)',
-      'hsl(180, 85%, 60%)',
+      'hsl(195,100%,50%)',
+      'hsl(195,90%,55%)',
+      'hsl(195,85%,60%)',
+      'hsl(180,90%,55%)',
+      'hsl(180,85%,60%)',
     ];
     return colors[index % colors.length];
   };
@@ -82,9 +77,9 @@ const GanttChart = ({ plan }: GanttChartProps) => {
               <Calendar className="w-5 h-5 text-primary" />
             </div>
             <div>
-              <h3 className="text-xl font-bold">Timeline</h3>
+              <h3 className="text-xl font-bold">Gantt Timeline</h3>
               <p className="text-sm text-muted-foreground">
-                Gantt chart showing task schedule and duration
+                Tasks scheduled with durations and dependencies
               </p>
             </div>
           </div>
@@ -98,58 +93,42 @@ const GanttChart = ({ plan }: GanttChartProps) => {
               layout="vertical"
               margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
             >
-              <CartesianGrid 
-                strokeDasharray="3 3" 
-                stroke="hsl(220, 20%, 20%)"
-                opacity={0.3}
-              />
-              <XAxis 
-                type="number" 
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(220,20%,20%)" opacity={0.3} />
+              <XAxis
+                type="number"
                 domain={[0, 'dataMax']}
-                label={{ value: 'Weeks', position: 'bottom', fill: 'hsl(215, 15%, 65%)' }}
-                stroke="hsl(215, 15%, 65%)"
-                tick={{ fill: 'hsl(215, 15%, 65%)' }}
+                label={{ value: 'Weeks', position: 'bottom', fill: 'hsl(215,15%,65%)' }}
+                stroke="hsl(215,15%,65%)"
+                tick={{ fill: 'hsl(215,15%,65%)' }}
               />
-              <YAxis 
-                type="category" 
-                dataKey="name" 
+              <YAxis
+                type="category"
+                dataKey="name"
                 width={200}
-                stroke="hsl(215, 15%, 65%)"
-                tick={{ fill: 'hsl(215, 15%, 65%)', fontSize: 12 }}
+                stroke="hsl(215,15%,65%)"
+                tick={{ fill: 'hsl(215,15%,65%)', fontSize: 12 }}
               />
-              <Tooltip content={<CustomTooltip />} cursor={{ fill: 'hsl(220, 20%, 20%)', opacity: 0.2 }} />
-              <Bar 
-                dataKey="duration" 
-                radius={[0, 8, 8, 0]}
-                animationDuration={800}
-              >
-                {tasks.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={getBarColor(index)} opacity={0.9} />
+              <Tooltip content={<CustomTooltip />} cursor={{ fill: 'hsl(220,20%,20%)', opacity: 0.2 }} />
+              <Bar dataKey="duration" radius={[0, 8, 8, 0]} animationDuration={800}>
+                {tasks.map((task, index) => (
+                  <Cell key={task.id} fill={getBarColor(index)} opacity={0.9} />
                 ))}
               </Bar>
             </BarChart>
           </ResponsiveContainer>
         </div>
 
-        {/* Legend */}
-        <div className="px-6 pb-6">
-          <div className="flex items-center gap-4 text-xs text-muted-foreground">
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-sm bg-primary" />
-              <span>Task Duration</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-sm bg-primary/60" />
-              <span>Estimated Timeline</span>
-            </div>
+        {/* Footer */}
+        <div className="px-6 pb-6 flex items-center gap-4 text-xs text-muted-foreground">
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 rounded-sm bg-primary" />Task Duration
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 rounded-sm bg-primary/60" />Estimated Timeline
           </div>
         </div>
-
-        {/* Footer */}
-        <div className="p-4 border-t border-border/30 bg-card/30">
-          <p className="text-xs text-muted-foreground text-center">
-            📊 Timeline is estimated based on task complexity • Adjust durations as needed
-          </p>
+        <div className="p-4 border-t border-border/30 bg-card/30 text-center text-xs text-muted-foreground">
+          📊 Timeline is based on AI-generated task durations • Adjust durations as needed
         </div>
       </div>
     </div>
@@ -157,3 +136,5 @@ const GanttChart = ({ plan }: GanttChartProps) => {
 };
 
 export default GanttChart;
+
+
