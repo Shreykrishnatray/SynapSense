@@ -14,8 +14,8 @@ import { Calendar } from 'lucide-react';
 interface TaskFromBackend {
   id: string;
   name: string;
-  start: number; // start week
-  duration: number; // weeks / days (numeric)
+  start: number;     // start time (weeks or days)
+  duration: number;  // duration (weeks or days)
   dependencies?: string[];
 }
 
@@ -38,10 +38,10 @@ const GanttChart = ({ plan }: GanttChartProps) => {
   const tasks: Task[] = useMemo(() => {
     if (!plan?.tasks || plan.tasks.length === 0) return [];
 
-    return plan.tasks.map(task => ({
+    return plan.tasks.map((task) => ({
       id: task.id,
       name: task.name.length > 35 ? task.name.substring(0, 35) + '...' : task.name,
-      startOffset: task.start,
+      startOffset: task.start,               // 👈 critical for Gantt
       duration: task.duration,
       start: task.start,
       end: task.start + task.duration,
@@ -63,7 +63,7 @@ const GanttChart = ({ plan }: GanttChartProps) => {
         <div className="bg-card/95 backdrop-blur-sm border border-border/50 rounded-lg p-3 shadow-neural">
           <p className="font-semibold text-sm mb-1 text-foreground">{data.name}</p>
           <p className="text-xs text-muted-foreground">
-            Week {data.start + 1} – {data.end} ({data.duration} units)
+            Time {data.start + 1} – {data.end} ({data.duration})
           </p>
         </div>
       );
@@ -109,24 +109,35 @@ const GanttChart = ({ plan }: GanttChartProps) => {
               margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
             >
               <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+
               <XAxis
                 type="number"
                 domain={[0, 'dataMax']}
                 label={{ value: 'Timeline', position: 'bottom' }}
               />
+
               <YAxis
                 type="category"
                 dataKey="name"
-                width={200}
+                width={220}
                 tick={{ fontSize: 12 }}
               />
+
               <Tooltip content={<CustomTooltip />} />
 
-              {/* Invisible offset bar */}
-              <Bar dataKey="startOffset" stackId="a" fill="transparent" />
+              {/* 🔹 Invisible offset bar */}
+              <Bar
+                dataKey="startOffset"
+                stackId="gantt"
+                fill="transparent"
+              />
 
-              {/* Actual task duration bar */}
-              <Bar dataKey="duration" stackId="a" radius={[0, 8, 8, 0]}>
+              {/* 🔹 Actual duration bar */}
+              <Bar
+                dataKey="duration"
+                stackId="gantt"
+                radius={[0, 8, 8, 0]}
+              >
                 {tasks.map((task, index) => (
                   <Cell key={task.id} fill={getBarColor(index)} />
                 ))}
@@ -136,7 +147,7 @@ const GanttChart = ({ plan }: GanttChartProps) => {
         </div>
 
         <div className="p-4 border-t border-border/30 bg-card/30 text-center text-xs text-muted-foreground">
-          📊 Timeline reflects AI-generated start times and durations
+          📊 Timeline accurately reflects AI-generated start times and durations
         </div>
       </div>
     </div>
@@ -144,6 +155,8 @@ const GanttChart = ({ plan }: GanttChartProps) => {
 };
 
 export default GanttChart;
+
+
 
 
 

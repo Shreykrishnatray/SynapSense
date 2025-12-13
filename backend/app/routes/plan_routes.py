@@ -11,27 +11,62 @@ router = APIRouter(prefix="/plan", tags=["Plan Routes"])
 class Task(BaseModel):
     id: str
     name: str
-    start: int
-    duration: int
+    start: int           # timeline unit (days)
+    duration: int        # duration in days
     dependencies: Optional[List[str]] = []
 
 class PlanResponse(BaseModel):
     goal: str
     tasks: List[Task]
 
-
 # -------------------- HELPERS --------------------
 
-def extract_steps(plan_text: str) -> List[str]:
-    """
-    Extract steps from AI text like:
-    1. Step one
-    2. Step two
-    - Another step
-    """
-    steps = re.findall(r"(?:\d+\.\s*|-\s*)(.+)", plan_text)
-    return [s.strip() for s in steps if len(s.strip()) > 0]
+def clean_task_name(text: str) -> str:
+    """Removes markdown, numbering, and 'Subtask X.X:' noise"""
+    text = re.sub(r"\*\*", "", text)
+    text = re.sub(r"Subtask\s*\d+(\.\d+)*:\s*", "", text, flags=re.I)
+    text = re.sub(r"^\d+(\.\d+)*\s*", "", text)
+    return text.strip()
 
+def extract_tasks_with_duration(plan_text: str):
+    """
+    Extracts:
+    - Task name
+    - Duration in days (converts weeks → days)
+    Robust against extra newlines/spaces/markdown
+    """
+    # Split by lines
+    lines = plan_text.splitlines()
+    tasks = []
+    i = 0
+    while i < len(lines):
+        line = lines[i].strip()
+        # Skip empty lines
+        if not line:
+            i += 1
+            continue
+
+        # Check if next line has duration
+        duration_line = lines[i+1].strip() if i+1 < len(lines) else ""
+        match = re.match(r"Duration:\s*(\d+)\s*(day|days|week|weeks)", duration_line, re.I)
+        if match:
+            value, unit = match.groups()
+            duration = int(value)
+            if unit.lower().startswith("week"):
+                duration *= 7
+            tasks.append({
+                "name": clean_task_name(line),
+                "duration": duration
+            })
+            i += 2  # skip duration line
+        else:
+            # No duration found, fallback to 1 day
+            tasks.append({
+                "name": clean_task_name(line),
+                "duration": 1
+            })
+            i += 1
+    return tasks
 
 # -------------------- API ROUTE --------------------
 
@@ -42,38 +77,34 @@ async def generate_plan(data: dict):
         raise HTTPException(status_code=400, detail="Goal is required")
 
     try:
-        # AI raw text
         raw_plan = generate_plan_from_goal(goal)
+        if not raw_plan or not raw_plan.strip():
+            raise Exception("AI returned empty plan.")
 
-        # Extract steps
-        steps = extract_steps(raw_plan)
+        extracted = extract_tasks_with_duration(raw_plan)
+        if not extracted:
+            raise Exception("Could not extract tasks with durations from AI response.")
 
-        if not steps:
-            raise Exception("AI did not return structured numbered bullets.")
-
-        # Convert steps -> tasks
         tasks: List[Task] = []
-        for i, step in enumerate(steps):
+        current_start = 0
+        for i, item in enumerate(extracted):
             task_id = f"t{i+1}"
-            start = max(0, i * 2)
-            duration = 2
-
-            # simple dependency: each task depends on previous one
-            dependencies = [f"t{i}"] if i > 0 else []
-
             tasks.append(
                 Task(
                     id=task_id,
-                    name=step,
-                    start=start,
-                    duration=duration,
-                    dependencies=dependencies
+                    name=item["name"],
+                    start=current_start,
+                    duration=item["duration"],
+                    dependencies=[f"t{i}"] if i > 0 else []
                 )
             )
+            current_start += item["duration"]
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
     return PlanResponse(goal=goal, tasks=tasks)
+
+
 
 
