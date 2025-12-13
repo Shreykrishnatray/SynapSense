@@ -27,6 +27,7 @@ const Index = () => {
   const [showLanding, setShowLanding] = useState(true);
   const [goal, setGoal] = useState("");
   const [plan, setPlan] = useState<PlanResponse | null>(null);
+  const [editablePlan, setEditablePlan] = useState(""); // ✅ NEW
   const [isLoading, setIsLoading] = useState(false);
 
   const generatePlan = async (userGoal: string) => {
@@ -40,13 +41,14 @@ const Index = () => {
       );
 
       setPlan(response.data);
+      setEditablePlan(response.data.tasks.map(t => t.name).join("\n")); // ✅ NEW
 
       toast({
         title: "Plan Generated ✨",
         description: "Scroll to explore your results.",
       });
-    } catch (error) {
-      console.error("Error generating plan:", error);
+    } 
+    catch (error) {
       toast({
         title: "Error",
         description: "Backend not reachable or failed.",
@@ -61,6 +63,7 @@ const Index = () => {
     setShowLanding(false);
     setGoal("");
     setPlan(null);
+    setEditablePlan("");
   };
 
   const handleRegenerate = () => {
@@ -72,18 +75,12 @@ const Index = () => {
       {showLanding && <LandingPage onGetStarted={() => setShowLanding(false)} />}
 
       {!showLanding && (
-        <div className="min-h-screen">
-          <header className="sticky top-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-lg">
-            <div className="container mx-auto px-6 py-4 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Button variant="ghost" size="sm" onClick={() => setShowLanding(true)}>
-                  <ChevronLeft className="w-4 h-4 mr-1" /> Back
-                </Button>
-
-                <h1 className="text-xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-                  SynapSense 💡
-                </h1>
-              </div>
+        <>
+          <header className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur-lg">
+            <div className="container mx-auto px-6 py-4 flex justify-between">
+              <Button variant="ghost" size="sm" onClick={() => setShowLanding(true)}>
+                <ChevronLeft className="w-4 h-4 mr-1" /> Back
+              </Button>
 
               {plan && (
                 <Button onClick={handleRegenerate} disabled={isLoading} variant="outline" size="sm">
@@ -101,15 +98,14 @@ const Index = () => {
               <>
                 <PlanDisplay
                   goal={plan.goal}
-                  plan={plan.tasks.map((t) => t.name).join("\n")}
+                  plan={editablePlan}
+                  onPlanUpdate={setEditablePlan} // ✅ NEW
                 />
 
-                {/* FIX: items must be string[] */}
                 <MindMap items={plan.tasks} />
-
                 <GanttChart plan={{ tasks: plan.tasks }} />
 
-                <div className="flex justify-center gap-4 mt-6">
+                <div className="flex justify-center gap-4">
                   <Button onClick={handleReset} variant="outline" size="lg">
                     Start New Plan
                   </Button>
@@ -120,7 +116,7 @@ const Index = () => {
               </>
             )}
           </main>
-        </div>
+        </>
       )}
     </div>
   );

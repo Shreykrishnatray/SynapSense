@@ -1,13 +1,22 @@
 import { useMemo } from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Cell,
+} from 'recharts';
 import { Calendar } from 'lucide-react';
 
 interface TaskFromBackend {
   id: string;
   name: string;
   start: number; // start week
-  duration: number; // weeks
-  dependencies?: string[]; // ids of dependent tasks
+  duration: number; // weeks / days (numeric)
+  dependencies?: string[];
 }
 
 interface GanttChartProps {
@@ -19,8 +28,9 @@ interface GanttChartProps {
 interface Task {
   id: string;
   name: string;
-  start: number;
+  startOffset: number;
   duration: number;
+  start: number;
   end: number;
 }
 
@@ -31,24 +41,29 @@ const GanttChart = ({ plan }: GanttChartProps) => {
     return plan.tasks.map(task => ({
       id: task.id,
       name: task.name.length > 35 ? task.name.substring(0, 35) + '...' : task.name,
-      start: task.start,
+      startOffset: task.start,
       duration: task.duration,
+      start: task.start,
       end: task.start + task.duration,
     }));
   }, [plan]);
 
   if (tasks.length === 0) {
-    return <div className="text-center text-muted-foreground p-6">No tasks available for Gantt chart.</div>;
+    return (
+      <div className="text-center text-muted-foreground p-6">
+        No tasks available for Gantt chart.
+      </div>
+    );
   }
 
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
-      const data = payload[0].payload;
+      const data = payload[1]?.payload || payload[0]?.payload;
       return (
         <div className="bg-card/95 backdrop-blur-sm border border-border/50 rounded-lg p-3 shadow-neural">
           <p className="font-semibold text-sm mb-1 text-foreground">{data.name}</p>
           <p className="text-xs text-muted-foreground">
-            Week {data.start + 1} - {data.end} ({data.duration} weeks)
+            Week {data.start + 1} – {data.end} ({data.duration} units)
           </p>
         </div>
       );
@@ -79,7 +94,7 @@ const GanttChart = ({ plan }: GanttChartProps) => {
             <div>
               <h3 className="text-xl font-bold">Gantt Timeline</h3>
               <p className="text-sm text-muted-foreground">
-                Tasks scheduled with durations and dependencies
+                Tasks scheduled with real start & duration
               </p>
             </div>
           </div>
@@ -93,42 +108,35 @@ const GanttChart = ({ plan }: GanttChartProps) => {
               layout="vertical"
               margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
             >
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(220,20%,20%)" opacity={0.3} />
+              <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
               <XAxis
                 type="number"
                 domain={[0, 'dataMax']}
-                label={{ value: 'Weeks', position: 'bottom', fill: 'hsl(215,15%,65%)' }}
-                stroke="hsl(215,15%,65%)"
-                tick={{ fill: 'hsl(215,15%,65%)' }}
+                label={{ value: 'Timeline', position: 'bottom' }}
               />
               <YAxis
                 type="category"
                 dataKey="name"
                 width={200}
-                stroke="hsl(215,15%,65%)"
-                tick={{ fill: 'hsl(215,15%,65%)', fontSize: 12 }}
+                tick={{ fontSize: 12 }}
               />
-              <Tooltip content={<CustomTooltip />} cursor={{ fill: 'hsl(220,20%,20%)', opacity: 0.2 }} />
-              <Bar dataKey="duration" radius={[0, 8, 8, 0]} animationDuration={800}>
+              <Tooltip content={<CustomTooltip />} />
+
+              {/* Invisible offset bar */}
+              <Bar dataKey="startOffset" stackId="a" fill="transparent" />
+
+              {/* Actual task duration bar */}
+              <Bar dataKey="duration" stackId="a" radius={[0, 8, 8, 0]}>
                 {tasks.map((task, index) => (
-                  <Cell key={task.id} fill={getBarColor(index)} opacity={0.9} />
+                  <Cell key={task.id} fill={getBarColor(index)} />
                 ))}
               </Bar>
             </BarChart>
           </ResponsiveContainer>
         </div>
 
-        {/* Footer */}
-        <div className="px-6 pb-6 flex items-center gap-4 text-xs text-muted-foreground">
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-sm bg-primary" />Task Duration
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-sm bg-primary/60" />Estimated Timeline
-          </div>
-        </div>
         <div className="p-4 border-t border-border/30 bg-card/30 text-center text-xs text-muted-foreground">
-          📊 Timeline is based on AI-generated task durations • Adjust durations as needed
+          📊 Timeline reflects AI-generated start times and durations
         </div>
       </div>
     </div>
@@ -136,5 +144,6 @@ const GanttChart = ({ plan }: GanttChartProps) => {
 };
 
 export default GanttChart;
+
 
 

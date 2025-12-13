@@ -11,3 +11,4 @@ Wasted Time and Low Productivity - User spend time deciding on what to do instea
 The closest existing tools are chatgpt/gpt based tools, notionAI and lovableAI...
 
 ALSO chatgpt/gpt based tools can give suggestions or tasks list, but they don't structure them into timelines, milestones or dependencies, visualizations all automatically... NotionAI can assist in task planning, prioritize or auto suggest taks but Users still have to manually organize timelines, dependencies & visualizations. SynapSense is a Productivity-first, helping users actually get things done in a more more better way. It's a unique hybrid betweem a personal AI project manager and a Visual productivity tool.
+
